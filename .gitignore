@@ -1,0 +1,10 @@
+# Junk
+*.old
+*.pkl
+.DS_Store
+
+# Random stuff
+.vscode
+.idea
+.cursor
+
