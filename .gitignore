@@ -2,6 +2,7 @@
 *.old
 *.pkl
 .DS_Store
+*.npy
 
 # Random stuff
 .vscode
