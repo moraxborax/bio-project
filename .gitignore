@@ -3,6 +3,7 @@
 *.pkl
 .DS_Store
 *.npy
+*.png
 
 # Random stuff
 .vscode

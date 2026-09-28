@@ -1,8 +1,6 @@
 import numpy as np
-from numpy.typing import NDArray
 import matplotlib.pyplot as plt
-from scipy.interpolate import make_smoothing_spline
-import pickle
+from tqdm import trange
 
 neuron_count: int = 200
 dt: float = 0.01 # units: ms
@@ -38,24 +36,24 @@ V_E = 0
 
 # noise_freq = 2200 # unit: Hz
 
-V = np.full((neuron_count, time_steps), V_rest, dtype=np.float64) # unit: mV
+V = np.full((neuron_count, time_steps), V_rest, dtype=np.float32) # unit: mV
 
-not_refractory = np.ones((neuron_count, time_steps), dtype=np.float64) 
-spikes = np.zeros((neuron_count, time_steps), dtype=np.float64)
+not_refractory = np.ones((neuron_count, time_steps), dtype=np.float32) 
+spikes = np.zeros((neuron_count, time_steps), dtype=np.float32)
 
-I_ext = np.zeros((neuron_count, time_steps), dtype=np.float64) # external current, unit: pA
-I_rec_out = np.zeros((neuron_count, time_steps), dtype=np.float64) # recurrent current, unit: pA
+I_ext = np.zeros((neuron_count, time_steps), dtype=np.float32) # external current, unit: pA
+I_rec_out = np.zeros((neuron_count, time_steps), dtype=np.float32) # recurrent current, unit: pA
 # W = np.zeros((neuron_count, neuron_count)) # synaptic weight. no units
 
-S_ampa_ext = np.zeros((neuron_count, time_steps), dtype=np.float64)
-S_ampa_rec = np.zeros((neuron_count, time_steps), dtype=np.float64)
+S_ampa_ext = np.zeros((neuron_count, time_steps), dtype=np.float32)
+S_ampa_rec = np.zeros((neuron_count, time_steps), dtype=np.float32)
 
 synapse_ratio = 0
 
-spikes_external = np.zeros((neuron_count, time_steps), dtype=np.float64)
+spikes_external = np.zeros((neuron_count, time_steps), dtype=np.float32)
 
 noise_freqs = range(0, 4000, 100)
-spike_freqs = np.zeros_like(noise_freqs, dtype=np.float64)
+spike_freqs = np.zeros_like(noise_freqs, dtype=np.float32)
 for idx, noise_freq in enumerate(noise_freqs):
 
     print(f"Current noise frequency: {noise_freq} Hz")
@@ -67,20 +65,14 @@ for idx, noise_freq in enumerate(noise_freqs):
     not_refractory.fill(1)
     spikes.fill(0)
     I_ext.fill(0)
-    # I_rec_out.fill(0)
-    # W.fill(0)
-
-    # Is it stable?
-    # stimulate it a bit too much or bit too less
-    # and then see if it returns to stable point
+    
 
     S_ampa_ext.fill(0)
     # S_ampa_rec.fill(0)
 
 
-    for t in range(1, time_steps):
-        if t % 100 == 0:
-            print(f"Current time step: {t}")
+    for t in trange(1, time_steps):
+        
         V[:, t] = V[:, t-1] + dt * (
                 -(V[:, t-1] - V_rest) * g_L / C + I_ext[:, t-1] * not_refractory[:, t-1] / C
             )
@@ -99,18 +91,7 @@ for idx, noise_freq in enumerate(noise_freqs):
         S_ampa_ext[:, t] = S_ampa_ext[:, t-1] -S_ampa_ext[:, t-1] / tau_ampa * dt + spikes_external[:, t-1]
         I_ext[:, t] = g_ampa * -(V[:, t] - V_E) * S_ampa_ext[:, t]
 
-        # S_ampa_rec[:, t] = S_ampa_rec[:, t-1] -S_ampa_rec[:, t-1] / tau_ampa * dt + spikes[:, t-1]
-        # I_rec_out[:, t] = g_ampa * -(V[:, t] - V_E) * S_ampa_rec[:, t]
-
-
-    # for idx in range(neuron_count):
-    #     t = np.arange(time_steps)
-    #     # plt.plot(t, I_ext[idx, :], label=f"I_ext of Neuron {idx}")
-    #     plt.plot(t, V[idx, :], label=f"V of Neuron {idx}")
-
-    # plt.legend()
-
-    # plt.show()
+        
 
     spike_freq = np.sum(spikes, axis=1).mean(axis=0) / time_duration * 1000 # units: Hz
     # print(f"Spike frequency: {spike_freq} Hz")
@@ -120,13 +101,10 @@ plt.plot(noise_freqs, spike_freqs)
 plt.xlabel("Noise Frequency (Hz)")
 plt.ylabel("Spike Frequency (Hz)")
 plt.title("Spike Frequency vs Noise Frequency")
+plt.savefig("spike_freq_vs_noise_freq.png", dpi=300)
 plt.show()
 
 np.save("spike_freqs.npy", spike_freqs)
 np.save("noise_freqs.npy", noise_freqs)
 
-spl = make_smoothing_spline(noise_freqs, spike_freqs)
-
-with open("fitted_curve_other.pkl", "wb") as f:
-    pickle.dump(spl, f)
 
